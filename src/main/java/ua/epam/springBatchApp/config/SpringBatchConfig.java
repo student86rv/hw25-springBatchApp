@@ -25,14 +25,15 @@ import ua.epam.springBatchApp.model.Account;
 import javax.sql.DataSource;
 import java.util.Properties;
 
-
 @Configuration
 @EnableBatchProcessing
 @PropertySource("classpath:/local.properties")
 public class SpringBatchConfig {
 
-    private static final String SQL_QUERY = "SELECT * FROM accounts";
     private static final double LOW_LIMIT = 10.0;
+    private static final String SQL_QUERY = "SELECT * FROM accounts";
+    private static final String MESSAGE_SUBJECT = "Low limit";
+    private static final String MESSAGE_TEXT = "Dear %s, we remind you that your balance is lower than %f $";
 
     @Autowired
     private Environment environment;
@@ -85,8 +86,8 @@ public class SpringBatchConfig {
             for (Account account : list) {
                 SimpleMailMessage simpleMailMessage = new SimpleMailMessage();
                 simpleMailMessage.setTo(account.getEmail());
-                simpleMailMessage.setSubject("Low balance");
-                simpleMailMessage.setText("Dear " + account.getName() + " , we remind you that your balance is lower than");
+                simpleMailMessage.setSubject(MESSAGE_SUBJECT);
+                simpleMailMessage.setText(String.format(MESSAGE_TEXT, account.getName(), LOW_LIMIT));
 
                 javaMailSender.send(simpleMailMessage);
             }
@@ -96,11 +97,11 @@ public class SpringBatchConfig {
     @Bean
     public JavaMailSender javaMailSender() {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
-        mailSender.setHost("smtp.gmail.com");
-        mailSender.setPort(587);
+        mailSender.setHost(environment.getProperty("spring.mail.host"));
+        mailSender.setPort(Integer.parseInt(environment.getProperty("spring.mail.port")));
 
-        mailSender.setUsername("my.gmail@gmail.com");
-        mailSender.setPassword("password");
+        mailSender.setUsername(environment.getProperty("spring.mail.username"));
+        mailSender.setPassword(environment.getProperty("spring.mail.password"));
 
         Properties props = mailSender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");
